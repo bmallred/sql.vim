@@ -21,6 +21,14 @@
 " `isql` or something similar as well.
 "
 
+if exists('g:sqshcom_loaded') || &cp || version < 700
+    finish
+endif
+
+let g:sqshcom_loaded            = 0.1
+let s:keepcpo = &cpo
+set cpo&vim
+
 let g:sqshcom_path              = "sqsh -w1000 "
 let g:sqshcom_common_commands   = ""
 let g:sqshcom_style             = "vert"
@@ -29,7 +37,7 @@ let g:sqshcom_database          = "master"
 let g:sqshcom_userid            = "sa"
 let g:sqshcom_passwd            = ""
 
-function! AE_setDatabase( server, database, userid, passwd )
+function! s:SetDatabase( server, database, userid, passwd )
     if a:server != ""
         let g:sqshcom_server = a:server
     endif
@@ -48,16 +56,16 @@ function! AE_setDatabase( server, database, userid, passwd )
     endif
 endfunction
 
-function! AE_changeDatabase()
+function! s:ChangeDatabase()
     let server = inputdialog("[SQSH] Server: ")
     let database = inputdialog("[SQSH] Database: ")
     let userid = inputdialog("[SQSH] User ID: ")
     let passwd = inputdialog("[SQSH] Password: ")
 
-    call AE_setDatabase(server, database, userid, passwd)
+    call s:SetDatabase(server, database, userid, passwd)
 endfunction
 
-function! AE_configureOutputWindow()
+function! s:ConfigureOutputWindow()
     set ts=4 buftype=nofile nowrap sidescroll=5 listchars+=precedes:<,extends:>
     normal $G
 
@@ -73,7 +81,7 @@ function! AE_configureOutputWindow()
     endif
 endfunction
 
-function! AE_execQuery( sql_query )
+function! s:ExecQuery( sql_query )
     new
     let l:tmpfile = tempname() . ".sql"
     let l:oldo = @o
@@ -94,11 +102,11 @@ function! AE_execQuery( sql_query )
     let l:cmd = l:cmd . " -i" . l:tmpfile
     silent exe "1,$!" . l:cmd
 
-    call AE_configureOutputWindow()
+    call s:ConfigureOutputWindow()
     call delete( l:tmpfile )
 endfunction
 
-function! AE_execLiteralQuery( sql_query )
+function! s:ExecLiteralQuery(sql_query)
     let l:query = a:sql_query
     let l:idx = stridx( l:query, "\n" )
     while l:idx >= 0
@@ -106,20 +114,32 @@ function! AE_execLiteralQuery( sql_query )
         let l:idx = stridx( l:query, "\n" )
     endwhile
 
-    call AE_execQuery( l:query )
+    call s:ExecQuery( l:query )
 endfunction
 
-function! AE_execQueryUnderCursor()
+function! s:ExecQueryUnderCursor()
     exe "silent norm! ?\\c[^.]*\\<\\(select\\|update\\|delete\\)\\>\nv/;\nh\"zy"
     noh
-    call AE_execLiteralQuery( @z )
+    call s:ExecLiteralQuery()
 endfunction
 
-" Mappings
-au FileType sql map <F8> :call AE_changeDatabase()<CR>
-au FileType sql vmap <F8> "zy:call AE_execLiteralQuery( @z )<CR>
+" Commands
+command SqlConfigure
+    \ call s:ChangeDatabase()
+command SqlRun
+    \ call s:ExecLiteralQuery(@z)
+
+" Autocommands
+augroup filetype_sql
+    autocmd!
+    autocmd FileType sql nnoremap <F8> :SqlConfigure<CR>
+    autocmd FileType sql vnoremap <F8> "zy:SqlRun<CR>
+augroup END
 
 cabbrev select Select
 cabbrev update Update
 cabbrev db     DB
 cabbrev sql    SQL
+
+let &cpo=s:keepcpo
+unlet s:keepcpo
