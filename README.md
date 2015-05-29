@@ -13,8 +13,12 @@ credit goes to the programmers from which this originated:
 Notes
 -----
 Default values are given and may be overridden. To quickly switch database
-connection settings press <F8> in normal mode. By not entering a value in
+connection settings press `F8` in normal mode. By not entering a value in
 one of the input dialogs it retains the previous value.
+
+To execute a SQL statement simply highlight the text in visual mode and press
+the `F8` key. The results will be  provided in a different window to browse in
+your own time.
 
 Dependencies
 ------------
